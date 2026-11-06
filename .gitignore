@@ -1,0 +1,20 @@
+# ===== 第三方上游源码快照（DeepTutor/hyperframes/nanobot，各有官方仓库，不纳入本仓库）=====
+upstream/
+
+# ===== Node 依赖与构建产物 =====
+node_modules/
+app/dist/
+app/build/*.tmp
+
+# ===== QA 截图 / 临时 =====
+.qa-shots/
+*.log
+
+# ===== 系统 =====
+.DS_Store
+
+# ===== 本地凭证（绝不上库）=====
+*.key
+*.pem
+.env
+.env.*

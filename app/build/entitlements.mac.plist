@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Electron 标准硬化运行时权限（公证必需） -->
+	<key>com.apple.security.cs.allow-jit</key>
+	<true/>
+	<key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+	<true/>
+	<key>com.apple.security.cs.allow-dyld-environment-variables</key>
+	<true/>
+	<!-- 内嵌 DeepTutor python runtime 与 Electron 不同签名主体，需放行库加载校验 -->
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
+	<!-- 学习端语音/摄像 + 本机环回访问内嵌核心 -->
+	<key>com.apple.security.device.audio-input</key>
+	<true/>
+	<key>com.apple.security.device.camera</key>
+	<true/>
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<key>com.apple.security.cs.disable-xored-text-segment-protection</key>
+	<true/>
+</dict>
+</plist>

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; media-src 'self' blob: mediastream:; img-src 'self' data: blob:; connect-src 'self' blob: data:; frame-src 'self' blob: data:; worker-src 'self' blob:;" />
+  <title>AI学习助理</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- ============ 启动卡片（进入前加载/就绪态，参考官方 apps/desktop 启动体验） ============ -->
+  <div id="boot" class="boot" data-phase="starting">
+    <div class="boot-stage">
+      <div class="boot-brand">
+        <span class="boot-mark"><svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M12 3 2 8l10 5 8-4v6" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 11v4c0 1.5 2.7 3 6 3s6-1.5 6-3v-4" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <div class="boot-word">AI学习助理</div>
+        <p class="boot-tagline" id="bootTagline">正在准备你的学习空间</p>
+      </div>
+      <div class="boot-loading" id="bootLoading">
+        <div class="track"><span></span></div>
+        <p class="step" id="bootStep">启动中……</p>
+      </div>
+      <div class="boot-problem" id="bootProblem" hidden>
+        <h1 id="bootProblemTitle">DeepTutor 核心未就绪</h1>
+        <p id="bootProblemBody">Agent 工作台与原生设置需要本地 DeepTutor 服务；学习端可先行使用。</p>
+        <pre id="bootProblemDetail"></pre>
+        <div class="boot-actions">
+          <button id="bootRetry" class="primary">重试连接</button>
+          <button id="bootEnter" class="ghost">进入学习端</button>
+        </div>
+      </div>
+    </div>
+    <footer class="boot-foot" id="bootEdition">AI学习助理 v0.10</footer>
+  </div>
+
+  <div class="app">
+    <!-- ============ 顶栏：两按钮 + 齿轮 ============ -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3 2 8l10 5 8-4v6" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 11v4c0 1.5 2.7 3 6 3s6-1.5 6-3v-4" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="brand-name">AI学习助理</span>
+      </div>
+      <nav class="switch">
+        <button class="tab active" data-view="agent">Agent</button>
+        <button class="tab" data-view="panorama">全景学习</button>
+        <button class="tab" data-view="study">沉浸式学习</button>
+        <button class="tab" data-view="hardware">智能硬件</button>
+      </nav>
+      <div class="topbar-right">
+        <span id="svcStatus" class="svc"></span>
+        <button class="gear" data-view="settings" title="设置">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="stage">
+      <!-- ============ 全景学习（F11 · heyclicky 式：屏幕即上下文，按下才看屏、截图即用即弃） ============ -->
+      <section id="view-panorama" class="view">
+        <div class="pano-grid">
+          <!-- 左：控制台 -->
+          <div class="pano-col">
+            <div class="card">
+              <h3>环境检查</h3>
+              <div class="row"><button id="panoCheckBtn" class="mini primary">立即检查</button><span id="panoCheckSum" class="models"></span></div>
+              <div id="panoCheckList" class="ready-list"></div>
+            </div>
+            <div class="card">
+              <h3>全景问答</h3>
+              <div class="pills">
+                <span class="pill pano-pill" data-ps="idle">空闲</span>
+                <span class="pill pano-pill" data-ps="capture">截屏中</span>
+                <span class="pill pano-pill" data-ps="listen">聆听中</span>
+                <span class="pill pano-pill" data-ps="think">思考中</span>
+                <span class="pill pano-pill" data-ps="speak">播报中</span>
+              </div>
+              <div class="study-actions">
+                <button id="panoAskBtn" class="big primary">看屏幕提问（截屏 + 说问题）</button>
+              </div>
+              <div class="study-actions">
+                <button id="panoPttBtn" class="big">按住说话（追问 · 复用当前屏幕帧）</button>
+              </div>
+              <div id="panoFrameBar" class="frame-bar">暂无有效屏幕帧 · 提问时将截新屏</div>
+              <div class="study-actions2">
+                <input id="panoTextQ" placeholder="…或打字提问（用当前配置的问题）" />
+                <button id="panoAskText" class="mini">文字提问</button>
+              </div>
+              <div class="study-actions2">
+                <button id="panoClearBtn" class="mini">清除屏幕标注</button>
+              </div>
+              <div id="panoSubtitle" class="subtitle">讲解字幕将显示在这里</div>
+            </div>
+            <div class="card">
+              <h3>学习轨迹（讲解记忆）</h3>
+              <div class="row">
+                <label class="switch-inline"><input type="checkbox" id="panoMemOn" checked /> 记住以往讲解的文字摘要（截图从不保存）</label>
+                <button id="panoTraceClear" class="mini danger">清空</button>
+              </div>
+              <div id="panoTraceList" class="pano-log"></div>
+            </div>
+            <div class="card">
+              <h3>隐私说明</h3>
+              <p class="tip">仅在你按下按钮或热键的那一刻截取一帧屏幕，截图只在内存中用于本次讲解、即用即弃、绝不落盘存储；平时不查看屏幕。学习轨迹只存问题与讲解的文字摘要，可随时清空。</p>
+            </div>
+          </div>
+
+          <!-- 右：设置与诊断 -->
+          <div class="pano-col">
+            <div class="card">
+              <h3>全局热键（应用后台也生效）</h3>
+              <label class="row"><span>快捷键</span><input id="panoHotkey" placeholder="Control+Shift+Space" /><button id="panoHotkeyApply" class="mini primary">应用</button></label>
+              <p class="tip">格式如 Control+Shift+Space、Command+Shift+1。按下后：唤起本应用 → 截新屏 → 说问题（自动断句）→ 讲解并在屏幕上圈点。</p>
+            </div>
+            <div class="card">
+              <h3>屏幕与标注</h3>
+              <label class="row"><span>捕捉屏幕</span><select id="panoDisplay"></select><button id="panoRefresh" class="mini">刷新</button></label>
+              <label class="row"><span>标注线宽</span><select id="panoSize"><option value="small">细</option><option value="mid" selected>中</option><option value="large">粗</option></select></label>
+              <label class="row"><span>停留时间</span><select id="panoHold"><option value="0">常驻（手动清除）</option><option value="15">15 秒</option><option value="45" selected>45 秒</option><option value="120">2 分钟</option></select><span class="models">秒后自动清除</span></label>
+              <label class="row"><span>追问窗口</span><select id="panoFrameTtl"><option value="0">每问必截新屏</option><option value="30">30 秒</option><option value="90" selected>90 秒</option><option value="180">3 分钟</option></select><span class="models">秒内追问复用同一帧多轮对话</span></label>
+              <div class="row"><label class="switch-inline"><input type="checkbox" id="panoVad" checked /> 语音自动断句（说完静音即停）</label></div>
+              <div class="row"><label class="switch-inline"><input type="checkbox" id="panoAnnotate" checked /> 在屏幕上画标注（关＝纯语音讲解）</label></div>
+              <div class="row"><button id="panoPerm" class="mini">打开屏幕录制权限设置</button><span id="panoPermMsg" class="models"></span></div>
+            </div>
+            <div class="card">
+              <h3>全景交互日志</h3>
+              <div id="panoLog" class="pano-log"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 学习端（孩子，本产品自有视图） ============ -->
+      <section id="view-study" class="view">
+        <div class="study-grid">
+          <div class="cam-col">
+            <div class="cam-wrap">
+              <video id="cam" autoplay playsinline muted></video>
+              <div id="camHint" class="cam-hint">摄像头未开启</div>
+              <div id="recDot" class="rec-dot" title="监看中"></div>
+            </div>
+            <!-- 讲解画布（F7）：平时隐藏，讲解类意图触发后展示 -->
+            <div id="explainWrap" class="explain-wrap hidden">
+              <div class="explain-bar">
+                <span>讲解画布</span>
+                <button id="btnExportVideo" class="mini">导出视频</button>
+                <button id="btnCloseExplain" class="mini">关闭</button>
+              </div>
+              <iframe id="explainFrame" sandbox=""></iframe>
+              <div id="videoMsg" class="models"></div>
+            </div>
+          </div>
+
+          <div class="study-side">
+            <div class="pills">
+              <span class="pill" data-s="idle">空闲</span>
+              <span class="pill" data-s="listen">监听中</span>
+              <span class="pill" data-s="think">思考中</span>
+              <span class="pill" data-s="speak">播报中</span>
+            </div>
+            <div class="mode-row">
+              <span id="modeTag" class="mode-tag">中文模式</span>
+              <label class="switch-inline"><input type="checkbox" id="engMode" /> 英语沉浸</label>
+              <label class="switch-inline"><input type="checkbox" id="subShow" checked /> 字幕</label>
+            </div>
+            <div id="subtitle" class="subtitle">AI 回复字幕区（可用语音“再说一遍”重听）</div>
+            <div id="voiceLog" class="voice-log"></div>
+            <div class="study-actions">
+              <button id="btnStart" class="big primary">开始上课</button>
+              <button id="btnEnd" class="big danger">下课</button>
+            </div>
+            <div class="study-actions2">
+              <button id="btnCam" class="mini">开启摄像头</button>
+              <button id="btnMic" class="mini">开启麦克风</button>
+              <button id="btnStopSpeak" class="mini">停（打断播报）</button>
+              <button id="btnSnapHelp" class="mini">看这道题</button>
+            </div>
+            <label class="row"><span>唤醒词</span><input id="wakeStudy" placeholder="小老师（留空＝免唤醒直接应答）" /></label>
+            <p class="stub-note">唤醒/VAD/播报在本地运行；识别与理解按需走所配置网关（仅你说话/点击时触发）。唤醒词与智能硬件端同步生效。</p>
+            <div class="study-actions2">
+              <button id="studyCheckBtn" class="mini primary">检查环境</button><span id="studyCheckSum" class="models"></span>
+            </div>
+            <div id="studyCheckList" class="ready-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ Agent端（内嵌 DeepTutor 原生工作台 /chat；右上角设置在同一宿主内打开 /settings，与页面左上角菜单同一页面） ============ -->
+      <section id="view-agent" class="view active">
+        <div id="agentHost" class="web-host">
+          <div id="agentLoading" class="host-loading">
+            <span class="hl-mark"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 3 2 8l10 5 8-4v6" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 11v4c0 1.5 2.7 3 6 3s6-1.5 6-3v-4" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <div class="hl-track"><span></span></div>
+            <p class="hl-text">正在载入 DeepTutor 工作台……</p>
+          </div>
+        </div>
+        <div id="agentFallback" class="fallback hidden">
+          <h3>DeepTutor 未就绪</h3>
+          <p>Agent 工作台与设置复用 DeepTutor 原生界面（attach 模式）。请先在 <b>设置 → 功能与集成 → DeepTutor 接入</b> 确认本地服务已启动，默认地址 <code>http://127.0.0.1:3782</code>。</p>
+          <div class="row"><button id="agentRetry" class="mini primary">重试连接</button></div>
+          <p id="agentProbeMsg" class="probe"></p>
+        </div>
+      </section>
+
+      <!-- ============ 智能硬件（F10 · ESP32 外设：发现/连接/回传/远程控制/音响路径） ============ -->
+      <section id="view-hardware" class="view">
+        <div class="hw-grid">
+          <!-- 左：发现与连接 -->
+          <div class="hw-col">
+            <div class="card">
+              <h3>环境检查</h3>
+              <div class="row"><button id="hwCheckBtn" class="mini primary">立即检查</button><span id="hwCheckSum" class="models"></span></div>
+              <div id="hwCheckList" class="ready-list"></div>
+            </div>
+            <div class="card">
+              <h3>设备发现（同 WiFi）</h3>
+              <div class="row"><button id="hwScan" class="mini primary">扫描设备</button><span id="hwScanMsg" class="models"></span></div>
+              <div id="hwDeviceList" class="hw-devices"></div>
+            </div>
+            <div class="card">
+              <h3>手动连接（IP 兜底）</h3>
+              <label class="row"><span>IP</span><input id="hwManualIp" placeholder="192.168.x.x" /></label>
+              <label class="row"><span>端口</span><input id="hwManualPort" type="number" value="80" /></label>
+              <label class="row"><span>配对 Token</span><input id="hwToken" type="password" placeholder="仅存本机(0600)" /></label>
+              <div class="row"><label class="switch-inline"><input type="checkbox" id="hwSaveToken" checked /> 记住本机</label></div>
+              <div class="row"><button id="hwConnectManual" class="mini primary">连接</button></div>
+            </div>
+            <div class="card">
+              <h3>声音输出路径（F10.6）</h3>
+              <p class="tip">选择 TTS 从哪个扬声器出声；需设备带喇叭才能选“设备音响”。</p>
+              <label class="row"><input type="radio" name="hwOut" id="hwOutPc" value="pc" /> 电脑音响</label>
+              <label class="row"><input type="radio" name="hwOut" id="hwOutDevice" value="device" /> ESP32 音响</label>
+              <label class="row"><span>设备音量</span><input id="hwVolume" type="range" min="0" max="100" /><span id="hwVolumeLabel">80</span></label>
+            </div>
+          </div>
+
+          <!-- 右：活动设备操控 + 预览 -->
+          <div class="hw-col hw-col-main">
+            <div class="card">
+              <div class="hw-statusbar">
+                <div class="pills">
+                  <span class="pill hw-pill" data-hs="disconnected">未连接</span>
+                  <span class="pill hw-pill" data-hs="connecting">连接中</span>
+                  <span class="pill hw-pill" data-hs="pairing">配对中</span>
+                  <span class="pill hw-pill" data-hs="connected">已连接</span>
+                  <span class="pill hw-pill" data-hs="working">工作中</span>
+                </div>
+                <span id="hwDevName" class="models"></span>
+                <span id="hwCaps" class="models"></span>
+                <button id="hwDisconnect" class="mini danger">断开</button>
+              </div>
+              <div class="hw-camwrap">
+                <img id="hwPreviewImg" alt="" />
+                <div id="hwPreviewHint" class="cam-hint">设备画面（连接并开启图像流后显示）</div>
+                <div id="hwRecDot" class="rec-dot" title="回传中"></div>
+              </div>
+              <div class="row"><label class="switch-inline"><input type="checkbox" id="hwToggleImage" /> 图像流</label>
+                <label class="switch-inline"><input type="checkbox" id="hwToggleAudio" /> 音频流</label>
+                <label class="switch-inline"><input type="checkbox" id="hwDeviceMode" /> 用外设进行学习（自动听/看→答）</label></div>
+              <label class="row"><span>唤醒词</span><input id="wakeHw" placeholder="小老师（留空＝免唤醒直接应答）" /></label>
+            </div>
+
+            <div class="card">
+              <h3>远程控制（电脑端下行操控）</h3>
+              <div class="study-actions">
+                <button id="hwBtnStart" class="big primary">开始上课</button>
+                <button id="hwBtnPause" class="big">暂停</button>
+                <button id="hwBtnResume" class="big">继续</button>
+                <button id="hwBtnEnd" class="big danger">下课</button>
+              </div>
+              <div class="study-actions2">
+                <button id="hwBtnCapture" class="mini">触发抓拍</button>
+                <button id="hwBtnCue" class="mini">提示音(我在听)</button>
+                <button id="hwBtnSleep" class="mini">休眠</button>
+                <button id="hwBtnWake" class="mini">唤醒</button>
+                <button id="hwBtnReboot" class="mini">重启</button>
+                <button id="hwBtnInfo" class="mini">查询状态</button>
+              </div>
+              <div class="row">
+                <input id="hwSpeakInput" placeholder="主动播报一段话到设备…"/>
+                <button id="hwBtnSpeak" class="mini primary">播报到设备</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>设备日志 / 事件</h3>
+              <div id="hwLog" class="hw-log"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

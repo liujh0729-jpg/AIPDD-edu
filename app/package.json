@@ -1,0 +1,60 @@
+{
+  "name": "ai-voice-tutor",
+  "version": "0.10.0",
+  "description": "AI学习助理 · 桌面壳 MVP（学习端 / Agent端 / 管理端）",
+  "main": "src/main.js",
+  "author": "edu",
+  "license": "MIT",
+  "scripts": {
+    "prestart": "node scripts/fetch-runtime.js",
+    "start": "electron .",
+    "fetch:runtime": "node scripts/fetch-runtime.js",
+    "prepack": "node scripts/fetch-runtime.js",
+    "pack": "electron-builder --dir",
+    "dist:mac": "ulimit -n 65536 2>/dev/null || true; node scripts/fetch-runtime.js && electron-builder --mac dmg --universal && node build/notarize.js",
+    "dist:mac:adhoc": "ulimit -n 65536 2>/dev/null || true; node scripts/fetch-runtime.js && ADHOC_SIGN=1 electron-builder --mac dmg --universal -c.mac.identity=null -c.mac.hardenedRuntime=false"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "work.aipdd.edututor",
+    "productName": "AI学习助理",
+    "asar": true,
+    "afterPack": "build/afterPack.js",
+    "afterSign": "build/afterSign.js",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "node_modules/ws/**/*",
+      "package.json"
+    ],
+    "extraResources": [],
+    "mac": {
+      "category": "public.app-category.education",
+      "icon": "build/icon.icns",
+      "target": [
+        {
+          "target": "dmg"
+        }
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "notarize": false,
+      "extendInfo": {
+        "NSCameraUsageDescription": "用于学习端摄像头监看作业现场",
+        "NSMicrophoneUsageDescription": "用于学习端语音交互与唤醒"
+      }
+    },
+    "dmg": {
+      "title": "AI学习助理"
+    }
+  },
+  "dependencies": {
+    "ws": "^8.22.1"
+  }
+}

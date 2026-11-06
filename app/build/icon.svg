@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3b6ef0"/>
+      <stop offset="1" stop-color="#1e50d6"/>
+    </linearGradient>
+  </defs>
+  <!-- 蓝色圆角方块（squircle，约 22% 圆角，四周留透明边距符合 macOS 图标规范） -->
+  <rect x="112" y="112" width="800" height="800" rx="180" ry="180" fill="url(#bg)"/>
+  <!-- 白色学士帽（与顶栏左上角 logo 同一 SVG 路径：viewBox 0 0 24 24，放大居中） -->
+  <g transform="translate(200,200) scale(26)" fill="none" stroke="#ffffff" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3 2 8l10 5 8-4v6"/>
+    <path d="M6 11v4c0 1.5 2.7 3 6 3s6-1.5 6-3v-4"/>
+  </g>
+</svg>

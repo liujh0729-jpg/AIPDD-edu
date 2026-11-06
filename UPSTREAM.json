@@ -1,0 +1,36 @@
+{
+  "_comment": "本项目基于以下上游代码改造。attach 模式内嵌 DeepTutor 本地服务；未来按 PRD FR-8.9 以 git subtree/submodule 拉取上游更新，二开采用叠加/补丁最小化侵入。",
+  "updatedAt": "2026-11-04",
+  "upstreams": [
+    {
+      "name": "deeptutor",
+      "role": "Agent 主引擎 + 原生 Agent/设置界面（PRD F8/F5）",
+      "repo": "https://github.com/HKUDS/DeepTutor",
+      "baselineVersion": "1.7.1",
+      "license": "Apache-2.0",
+      "path": "upstream/deeptutor",
+      "source": "DeepTutor-main.zip（GitHub 直连不可用，改由用户下载代码包）",
+      "integration": "attach：Electron 壳用 WebContentsView 内嵌本地服务 http://127.0.0.1:3782（Agent=/chat，原生设置=/settings）；本产品能力以叠加层接入，不改上游",
+      "routes": { "agent": "/chat", "settings": "/settings" }
+    },
+    {
+      "name": "hyperframes",
+      "role": "F7 多模态讲解视频渲染引擎",
+      "repo": "https://github.com/heygen-com/hyperframes",
+      "baselineVersion": "main（zip 快照，monorepo）",
+      "license": "Apache-2.0",
+      "path": "upstream/hyperframes",
+      "source": "hyperframes-main.zip",
+      "integration": "本地子进程调用 `npx hyperframes render`（PRD FR-7.2），缺 Node/FFmpeg 时优雅降级"
+    },
+    {
+      "name": "nanobot",
+      "role": "仅设计参考（PRD：Dream 习惯固化 / 轻量网关 / 定时自动化 理念）",
+      "repo": "https://github.com/nanobrowser/nanobot",
+      "baselineVersion": "main（zip 快照）",
+      "path": "upstream/nanobot",
+      "source": "nanobot-main.zip",
+      "integration": "reference-only：不引入其代码/进程，不保留第二套 agent 运行时（PRD F8 集成决策）"
+    }
+  ]
+}
