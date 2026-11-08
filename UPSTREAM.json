@@ -10,7 +10,7 @@
       "license": "Apache-2.0",
       "path": "upstream/deeptutor",
       "source": "DeepTutor-main.zip（GitHub 直连不可用，改由用户下载代码包）",
-      "integration": "attach：Electron 壳用 WebContentsView 内嵌本地服务 http://127.0.0.1:3782（Agent=/chat，原生设置=/settings）；本产品能力以叠加层接入，不改上游",
+      "integration": "attach：Electron 壳用 WebContentsView 内嵌本地服务（Agent=/chat，原生设置=/settings）；本产品能力以叠加层接入，并在上游内做最小二开补丁（AIPDD 提供方注册、模型设置整合、视频适配、壳-目录收编）",
       "routes": { "agent": "/chat", "settings": "/settings" }
     },
     {

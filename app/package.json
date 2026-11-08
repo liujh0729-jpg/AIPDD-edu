@@ -1,6 +1,6 @@
 {
   "name": "ai-voice-tutor",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "AI学习助理 · 桌面壳 MVP（学习端 / Agent端 / 管理端）",
   "main": "src/main.js",
   "author": "edu",

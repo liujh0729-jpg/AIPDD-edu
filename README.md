@@ -76,7 +76,7 @@ node scripts/build-runtime --target macos-x64
 
 ## 发布
 
-- 最新 Release：[v0.10.0](https://github.com/liujh0729-jpg/AIPDD-edu/releases/tag/v0.10.0)
+- 最新 Release：[v0.11.0](https://github.com/liujh0729-jpg/AIPDD-edu/releases/tag/v0.11.0)
   —— 已公证的 dmg 安装包 + 双架构 runtime 归档（构建依赖，含 sha256 校验）。
 - `npm run dist:mac` = universal 构建 → afterSign 注入 runtime 并逐文件 Developer ID 签名 → dmg → notarytool 公证 + staple。
 

@@ -3,7 +3,7 @@
 // 背景：桌面壳启动/打包都依赖封包内 runtime/{python,node,web,core}（launcher.js 定位、
 // build/afterPack.js copyRuntime 注入）。该 runtime 由上游 DeepTutor 官方
 // apps/desktop/scripts/build-runtime 组装产出（基线见仓库根 UPSTREAM.json），
-// 体积约 2G，不进 git 仓库，而是作为 v0.10.0 Release 的二进制资产分发。
+// 体积约 2G，不进 git 仓库，而是作为 v0.11.0 Release 的二进制资产分发。
 //
 // 本脚本：查询 Release → 下载对应架构归档（走 api.github.com 重定向，免 token）→
 // sha256 校验（期望值钉死在 runtime-sha256.json，防篡改/防损坏）→ 解包到与
@@ -19,7 +19,7 @@ const crypto = require('crypto')
 const { execFileSync } = require('child_process')
 
 const REPO = 'liujh0729-jpg/AIPDD-edu'
-const TAG = 'v0.10.0'
+const TAG = 'v0.11.0'
 const ARCHES = ['macos-arm64', 'macos-x64']
 // 与 build/afterPack.js copyRuntime 及 launcher.js 开发态的定位路径保持一致
 const LOCAL = path.resolve(__dirname, '../../upstream/deeptutor/apps/desktop/.local')
