@@ -62,15 +62,6 @@ async function startCore () {
   }
 }
 
-// 战①：配置保存后把壳网关收编进上游 model_catalog（仅存过 key 的网关才上传凭证，环回本机）
-async function syncCatalogAfterSave (cfg) {
-  if (!gateway.hasBackend || !gateway.hasBackend()) {
-    const dt = (cfg && cfg.deeptutor) || {}
-    if (dt.mode !== 'bundled' && dt.url) { try { gateway.setBackend(new URL(dt.url).origin) } catch (e) {} }
-  }
-  return await gateway.syncCatalog(cfg)
-}
-
 function send (channel, payload) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload)
 }
@@ -306,16 +297,12 @@ let activeSession = null
 
 // ——— 配置 / 密钥 ———
 ipcMain.handle('config:load', () => config.load())
-ipcMain.handle('config:save', async (_e, cfg) => {
-  const { keys = {}, ...rest } = cfg
-  config.save(rest)
-  const merged = { ...config.readKeys(), ...keys }
-  config.writeKeys(merged)
-  const sync = await syncCatalogAfterSave(config.load())
-  return { ok: true, sync }
+ipcMain.handle('config:save', (_e, cfg) => {
+  config.save(cfg)
+  return { ok: true }
 })
 // 内嵌设置页按分区只回写自己那部分：对本地 config 做一层深合并（对象浅合并、数组/标量整体替换）
-ipcMain.handle('config:patch', async (_e, patch) => {
+ipcMain.handle('config:patch', (_e, patch) => {
   if (!patch || typeof patch !== 'object') return { ok: false, error: '非法补丁' }
   const cur = config.load()
   const merged = { ...cur }
@@ -324,36 +311,13 @@ ipcMain.handle('config:patch', async (_e, patch) => {
     else merged[k] = v
   }
   config.save(merged)
-  const touched = patch.gateways || patch.roles
-  const sync = touched ? await syncCatalogAfterSave(merged) : null
-  return { ok: true, sync }
-})
-// 凭证：读取只回掩码，写入明文仅落本机 0600 keys.json（键名如 gateway:<id>）
-ipcMain.handle('config:keys:masked', (_e, id) => {
-  const v = config.readKeys()[id]
-  return v ? '****' + String(v).slice(-4) : ''
-})
-ipcMain.handle('config:keys:set', async (_e, { id, value }) => {
-  const keys = config.readKeys()
-  if (value) keys[id] = value; else delete keys[id]
-  config.writeKeys(keys)
-  // 战①：网关凭证变更同样要收编进目录（目录里的 api_key 与 keys.json 保持一致）；hw:<id> 等设备密钥不触发
-  const isGatewayKey = config.load().gateways.some(g => g.id === id)
-  const sync = isGatewayKey ? await syncCatalogAfterSave(config.load()) : null
-  return { ok: true, sync }
-})
-ipcMain.handle('config:keys:load', () => {
-  const keys = config.readKeys()
-  const masked = {}
-  for (const [k, v] of Object.entries(keys)) masked[k] = v ? '****' + String(v).slice(-4) : ''
-  return masked
+  return { ok: true }
 })
 // FR-6.8 配置导入导出（不含密钥）
 ipcMain.handle('config:export', async () => {
   const { cancellation, filePath } = await dialog.showSaveDialog(win, { title: '导出配置', defaultPath: 'edu-tutor-config.json' })
   if (cancellation || !filePath) return { ok: false, cancelled: true }
   const cfg = config.load()
-  cfg.gateways = cfg.gateways.map(g => ({ ...g, keyRef: '' }))
   fs.writeFileSync(filePath, JSON.stringify(cfg, null, 2), 'utf8')
   return { ok: true, path: filePath }
 })
@@ -368,8 +332,7 @@ ipcMain.handle('config:import', async () => {
   } catch (e) { return { ok: false, error: e.message } }
 })
 
-// ——— 网关（F6：模型执行统一走上游，壳只做目录登记 + 计量；无本机选路/测试端点）———
-ipcMain.handle('gateway:fetchModels', (_e, p) => gateway.fetchModels(p.baseURL, p.gatewayId))
+// ——— 用量计量（F6：模型执行统一走上游目录，壳只做本机计量与熔断）———
 ipcMain.handle('usage:summary', () => gateway.usageSummary())
 
 // ——— 语音（F2）———
@@ -540,17 +503,21 @@ async function readyCheck (scope) {
   const probe = coreOk ? await gateway.apiCall('GET', '/health/ready', undefined, { timeout: 5000 }) : null
   items.push(mkItem('本地核心（DeepTutor）', coreOk && probe && probe.ok,
     coreOk ? ((probe && probe.ok) ? '应答正常' : ('无应答：' + ((probe && probe.error) || 'HTTP 异常'))) : '未启动：看启动卡片状态，或 设置 → DeepTutor 接入'))
-  // —— 通用：网关与 Key ——
-  const gwReady = (cfg.gateways || []).filter((g) => g && g.baseURL && keys[g.id])
-  items.push(mkItem('模型网关 + Key', gwReady.length > 0,
-    gwReady.length ? ('已登记：' + gwReady.map((g) => g.name || g.id).join('、')) : '缺失：设置 → 模型网关：至少填一个网关的 BaseURL 并保存 Key'))
-  // —— 通用：角色映射（运行期以上游激活剖面为准；未指定模型仅在无任何网关时报缺）——
-  const roleNeed = scope === 'panorama' ? ['vlm', 'stt'] : ['llm', 'stt']
-  for (const rk of roleNeed) {
-    const r = (cfg.roles && cfg.roles[rk]) || {}
-    if (String(r.model || '').trim()) items.push(mkItem('角色映射 ' + rk, true, (r.gateway || '默认') + ' · ' + r.model))
-    else items.push(mkItem('角色映射 ' + rk, gwReady.length > 0,
-      gwReady.length ? '未指定模型：按上游激活剖面走（建议在 设置 → 模型网关 确认已激活）' : '缺失：无任何已登记网关，且 ' + rk + ' 未指定模型', 'opt'))
+  // —— 通用：模型目录（上游唯一真源：提供方/凭证/激活模型统一在 设置 → 模型设置 管理）——
+  const cat = coreOk ? await gateway.apiCall('GET', '/api/settings/catalog', undefined, { timeout: 5000 }) : null
+  const services = (cat && cat.ok && cat.data && cat.data.catalog && cat.data.catalog.services) || {}
+  // 视觉理解 ride llm 服务（视觉是模型能力）；决策 task 未激活时上游自动继承 llm
+  for (const [svc, label] of [['llm', '语言/视觉模型'], ['stt', '语音识别模型']]) {
+    const s = services[svc] || {}
+    const profile = (s.profiles || []).find((p) => p && p.id === s.active_profile_id)
+    const model = profile && (profile.models || []).find((m) => m && m.id === s.active_model_id)
+    if (model) {
+      items.push(mkItem('模型服务 · ' + label, true,
+        '已激活：' + (model.model || model.name || model.id) + (profile.api_key ? '' : '（未保存 Key；免钥提供方可忽略）')))
+    } else {
+      items.push(mkItem('模型服务 · ' + label, false,
+        coreOk ? '未激活：设置 → 模型设置：添加提供方、保存 Key，并在对应服务模型页激活模型' : '本地核心未启动，无法读取模型目录'))
+    }
   }
   // —— 通用：每日额度/熔断余量 ——
   const usage = gateway.usageSummary()

@@ -1,42 +1,12 @@
-// F6.5/6.8 配置与密钥存储：Key 只进本机 0600 文件，绝不写死
+// F6.5/6.8 配置与密钥存储：Key 只进本机 0600 文件，绝不写死。
+// 模型提供方/凭证/激活模型统一由上游模型目录管理（设置 → 模型设置），壳不再持有网关与角色表；
+// keys.json 仅存智能硬件设备 token（键名 hw:<deviceId>）。
 const { app } = require('electron')
 const path = require('path')
 const fs = require('fs')
 
-// —— AIPDD 端点登记（PRD 6.1，仅默认值，Key 一律留空）——
-const AIPDD_PRESET = {
-  id: 'aipdd',
-  name: 'AIPDD',
-  baseURL: 'https://app.aipdd.work/api/v1',
-  endpoints: {
-    text: 'https://app.aipdd.work/api/v1',
-    imagesGenerations: 'https://app.aipdd.work/api/v1/images/generations',
-    imagesEdits: 'https://app.aipdd.work/api/v1/images/edits',
-    videos: 'https://app.aipdd.work/api/v1/videos',
-    audioSpeech: 'https://app.aipdd.work/api/v1/audio/speech',
-    embeddings: 'https://app.aipdd.work/api/v1/embeddings',
-    audioTranscriptions: 'https://app.aipdd.work/api/v1/audio/transcriptions',
-    systemOne: 'https://app.aipdd.work/api/v1/systemone'
-  }
-}
-
 function defaults () {
   return {
-    gateways: [
-      { ...AIPDD_PRESET, keyRef: '' },
-      { id: 'newapi', name: 'NewAPI', baseURL: '', endpoints: {}, keyRef: '' },
-      { id: 'volc', name: '火山引擎（豆包）', baseURL: '', endpoints: {}, keyRef: '' },
-      { id: 'aliyun', name: '阿里云百炼', baseURL: '', endpoints: {}, keyRef: '' }
-    ],
-    // 按角色映射：gateway+endpoint+model，可选 backup（FR-6.3 故障切换）
-    roles: {
-      vlm: { gateway: 'aipdd', endpoint: 'text', model: '', backup: '' },
-      llm: { gateway: 'aipdd', endpoint: 'text', model: '', backup: '' },
-      decision: { gateway: 'aipdd', endpoint: 'systemOne', model: '', backup: '' },
-      stt: { gateway: 'aipdd', endpoint: 'audioTranscriptions', model: '', backup: '' },
-      tts: { gateway: 'local', endpoint: 'audioSpeech', model: '', backup: '' },
-      embedding: { gateway: 'aipdd', endpoint: 'embeddings', model: '', backup: '' }
-    },
     wakeWord: '小老师',
     directAnswerMode: false, // FR-5.6a 直接解答模式，默认关
     muteMode: false,         // FR-2.5 静音模式：关闭 AI 主动说话（speech.js 消费）
@@ -96,11 +66,10 @@ function load () {
   const cfg = readJson(cfgPath(), null)
   if (!cfg) return d
   const merged = { ...d, ...cfg }
-  merged.roles = { ...d.roles, ...(cfg.roles || {}) }
-  for (const r of Object.keys(merged.roles)) merged.roles[r] = { ...d.roles[r], ...merged.roles[r] }
+  // 网关/角色表已收编上游模型目录，遗留字段剔除（凭证已在目录剖面内，不丢数据）
+  delete merged.gateways
+  delete merged.roles
   for (const k of Object.keys(CFG_DEFAULTS)) if (merged[k] === undefined) merged[k] = CFG_DEFAULTS[k]
-  // 仅在键缺失/类型损坏时回填默认网关；空数组是用户“删光了网关”的结果，不得复活
-  if (!Array.isArray(merged.gateways)) merged.gateways = d.gateways
   merged.deeptutor = { ...d.deeptutor, ...(cfg.deeptutor || {}) }
   merged.hardware = { ...d.hardware, ...(cfg.hardware || {}) }
   merged.panorama = { ...d.panorama, ...(cfg.panorama || {}) }

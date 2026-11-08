@@ -1,16 +1,14 @@
-// F6 模型网关适配层（战③：模型执行统一收编上游 model_catalog，壳不再自建第二份网关）
-// 说明：壳不再自己拼 OpenAI 兼容 HTTP、按角色选路、故障切换、管理各家 Key——那是与
-//       上游目录重复的「第二份网关」。所有模型调用按 service 走上游本地 HTTP 端点，
-//       由上游 model_catalog 解析激活的 profile/model 并执行；壳只保留本机独有的两件事：
-//         1) 每日成本熔断（NFR-3）与用量计量（FR-6.6）——口径由上游返回的 usage 喂入；
-//         2) 把壳配置里的网关/角色登记进上游目录（syncCatalog，单一可见真源的导入桥）。
+// F6 模型调用适配层：模型执行统一走上游 model_catalog，壳不自建网关。
+// 所有模型调用按 service 走上游本地 HTTP 端点，由上游 model_catalog 解析激活的
+// profile/model 并执行（提供方/凭证/激活均在 设置 → 模型设置 管理）；壳只保留
+// 本机独有的每日成本熔断（NFR-3）与用量计量（FR-6.6）——口径由上游返回的 usage 喂入。
 // 硬约束：所有调用仅由用户动作触发（点击/语音指令），绝不自动发起计费测试调用。
 const path = require('path')
 const fs = require('fs')
 const { app } = require('electron')
 const config = require('./config')
 
-// 壳角色 → 上游 catalog service（与 gateway_catalog_sync.ROLE_TO_SERVICE 对齐）：
+// 壳角色 → 上游 catalog service：
 //  - vlm 与 llm 共用上游 llm 服务（视觉是模型能力，不是独立服务）
 //  - decision 走 task 服务（未配置时上游自动继承 llm）
 const SERVICE_BY_ROLE = { llm: 'llm', vlm: 'llm', decision: 'task' }
@@ -102,7 +100,7 @@ async function apiCall (method, apiPath, body, opts = {}) {
   }
 }
 
-// 统一文本/视觉调用：按角色映射到上游 catalog service，非流式，回传 usage 供计量。
+// 统一文本/视觉调用：按调用场景选择上游 catalog service，非流式，回传 usage 供计量。
 // 视觉消息约定：messages 内 content 可为 [{type:'text'},{type:'image_url'}] 数组（OpenAI 兼容），
 // 由上层（agent.js）构造，上游 provider 适配层原样透传给兼容端点。
 async function chat (roleKey, messages, opts = {}) {
@@ -164,28 +162,6 @@ async function transcribe (wavBuffer) {
   }
 }
 
-// 免费元数据接口：模型列表（网关配置面板用，仅用户点击、不计费）
-async function fetchModels (baseURL, gwId) {
-  if (!baseURL) return { ok: false, error: 'BaseURL 为空' }
-  const keys = config.readKeys()
-  const key = keys[gwId] || ''
-  const url = baseURL.replace(/\/+$/, '') + '/models'
-  const headers = { 'Accept': 'application/json' }
-  if (key) headers['Authorization'] = 'Bearer ' + key
-  try {
-    const ctrl = new AbortController()
-    const t = setTimeout(() => ctrl.abort(), 8000)
-    const resp = await fetch(url, { headers, signal: ctrl.signal })
-    clearTimeout(t)
-    if (!resp.ok) return { ok: false, error: 'HTTP ' + resp.status }
-    const data = await resp.json()
-    const models = (data.data || data.models || []).map(m => m.id).filter(Boolean)
-    return { ok: true, models }
-  } catch (e) {
-    return { ok: false, error: String(e && e.message || e) }
-  }
-}
-
 // SkillHub 等任意 URL 的下载（用户选中后由 skills 模块下载；不自动执行）
 function fetchUrl (url) {
   return fetch(url, { headers: { 'Accept': 'application/octet-stream, application/json, text/plain' } })
@@ -193,42 +169,4 @@ function fetchUrl (url) {
     .then(b => Buffer.from(b))
 }
 
-// 战①：壳网关收编上游 model_catalog——把 gateways/roles 注册为目录 provider 剖面。
-// 这是「单一可见真源」的导入桥：壳配置只负责把已有网关登记进上游目录，运行期模型
-// 选择一律以上游激活为准（chat/embed/transcribe 都按 service 走上游，不再看壳 roles）。
-async function syncCatalog (cfg) {
-  if (!backendURL) return { ok: false, skipped: true, error: '本地核心未启动，未同步模型目录' }
-  const keys = config.readKeys()
-  const gateways = (cfg.gateways || [])
-    .filter(g => g && g.id)
-    .map(g => ({
-      id: String(g.id),
-      name: String(g.name || ''),
-      baseURL: String(g.baseURL || ''),
-      endpoints: g.endpoints || {},
-      api_key: String(keys[g.id] || '')
-    }))
-  const roles = {}
-  for (const k of ['llm', 'vlm', 'decision', 'embedding', 'stt', 'tts']) {
-    const r = (cfg.roles && cfg.roles[k]) || {}
-    roles[k] = { gateway: String(r.gateway || ''), endpoint: String(r.endpoint || ''), model: String(r.model || ''), backup: String(r.backup || '') }
-  }
-  try {
-    const ctrl = new AbortController()
-    const t = setTimeout(() => ctrl.abort(), 8000)
-    const resp = await fetch(backendURL + '/api/settings/edu/sync-gateways', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({ gateways, roles }),
-      signal: ctrl.signal
-    })
-    clearTimeout(t)
-    if (!resp.ok) return { ok: false, error: 'HTTP ' + resp.status }
-    const data = await resp.json()
-    return { ok: true, synced: data.synced || {} }
-  } catch (e) {
-    return { ok: false, error: String(e && e.message || e) }
-  }
-}
-
-module.exports = { chat, decide, transcribe, embed, fetchModels, fetchUrl, usageSummary, setBackend, hasBackend, backendBase, apiCall, syncCatalog }
+module.exports = { chat, decide, transcribe, embed, fetchUrl, usageSummary, setBackend, hasBackend, backendBase, apiCall }

@@ -2,16 +2,11 @@ const { contextBridge, ipcRenderer } = require('electron')
 
 // 只暴露必要的方法，渲染进程不接触 Node/fs/密钥
 contextBridge.exposeInMainWorld('api', {
-  // 配置 / 密钥
+  // 配置
   loadConfig: () => ipcRenderer.invoke('config:load'),
   saveConfig: (cfg) => ipcRenderer.invoke('config:save', cfg),
-  loadKeysMasked: () => ipcRenderer.invoke('config:keys:load'),
   exportConfig: () => ipcRenderer.invoke('config:export'),
   importConfig: () => ipcRenderer.invoke('config:import'),
-
-  // 网关（模型执行统一走上游；壳仅提供目录登记与用量计量）
-  fetchModels: (payload) => ipcRenderer.invoke('gateway:fetchModels', payload),
-  usageSummary: () => ipcRenderer.invoke('usage:summary'),
 
   // 语音
   speak: (text, opts) => ipcRenderer.invoke('speech:speak', { text, opts }),

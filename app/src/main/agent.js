@@ -127,16 +127,13 @@ async function normalizeIntent (text) {
   return { ok: true, intent: m ? m[1] : 'OTHER' }
 }
 
-// 服务状态：MVP 下 Agent 走网关直连，DeepTutor 进程待编排接入
+// 服务状态：模型调用已统一走上游模型目录
 function status () {
-  const cfg = config.load()
-  const llm = cfg.roles.llm
-  const configured = !!(llm && llm.model)
   return {
-    agent: configured ? 'gateway-llm (DeepTutor 进程待编排)' : 'unconfigured',
-    voice: 'local-say + gateway-stt',
+    agent: 'catalog-llm',
+    voice: 'local-say + catalog-stt',
     camera: 'browser-getusermedia',
-    engine: { primary: 'DeepTutor (计划：本地 127.0.0.1:3782 进程)', current: 'F6 网关适配直连（可平滑替换为 DeepTutor SDK）' }
+    engine: { primary: 'DeepTutor（bundled 本地核心）', current: '模型目录激活模型（统一调用）' }
   }
 }
 

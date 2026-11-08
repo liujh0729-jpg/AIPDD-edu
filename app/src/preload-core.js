@@ -1,7 +1,8 @@
 // 内嵌 DeepTutor 视图专用 bridge preload（CommonJS，sandbox 预加载）。
 // 目的：让上游设置页（我们新增的原生分区）能读写本产品存于 Electron 本地 config.json 的配置，
-//       并调用本产品自有能力（网关用量 / 记忆 / 知识库 / 报告 / 技能 / 智能硬件）。
-// 硬约束：只暴露极窄的一组命名方法；不暴露 Node/fs；凭证读取只回掩码，明文仅由用户输入回写。
+//       并调用本产品自有能力（用量计量 / 记忆 / 知识库 / 报告 / 技能 / 智能硬件）。
+// 模型提供方/凭证统一由上游模型目录管理，桥不再暴露网关/密钥方法。
+// 硬约束：只暴露极窄的一组命名方法；不暴露 Node/fs。
 const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('__edu', {
@@ -12,13 +13,8 @@ contextBridge.exposeInMainWorld('__edu', {
   getConfig: () => ipcRenderer.invoke('config:load'),
   patchConfig: (patch) => ipcRenderer.invoke('config:patch', patch),
 
-  // 凭证：读取仅返回掩码；写入明文只落本机 0600 keys.json（键名 = 网关 id）
-  getMaskedKey: (id) => ipcRenderer.invoke('config:keys:masked', id),
-  setKey: (id, value) => ipcRenderer.invoke('config:keys:set', { id, value }),
-
-  // 用量 / 网关
+  // 用量
   usageSummary: () => ipcRenderer.invoke('usage:summary'),
-  fetchModels: (payload) => ipcRenderer.invoke('gateway:fetchModels', payload),
 
   // 学习记忆
   memoryFacts: () => ipcRenderer.invoke('memory:facts'),
